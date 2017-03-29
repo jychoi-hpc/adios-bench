@@ -3,7 +3,7 @@ Test Adios Staging
 
 This is a program to demonstrate Adios write/read with files and staging methods. 
 
-One executable (adios_icee) can work in two modes:
+The main executable (```adios_icee```) can work in two modes:
 * server: write data (by default)
 * client: read data (use -c option)
 
