@@ -1,18 +1,45 @@
 Test Adios Staging
 ==================
 
-This is a test program to demonstrate Adios staging methods.
+This is a program to demonstrate Adios write/read with files and staging methods. 
 
-adios_icee can work in two mode:
+One executable (adios_icee) can work in two modes:
 * server: write data (by default)
 * client: read data (use -c option)
 
-We can use staging methods in between: DATASPACES, DIMES, and FLEXPATH
+We can use staging methods in between: DATASPACES, DIMES, FLEXPATH, and ICEE methods
+
+Main command line parameters are as follows:
+
+```
+$ adios_icee -h
+Usage: adios_icee [OPTIONS]...
+
+  -h, --help                Print help and exit
+  -V, --version             Print version and exit
+  -c, --client              Client mode  (default=off)
+  -w, --writemethod=STRING  ADIOS write method  (default=`POSIX1')
+  -r, --readmethod=STRING   ADIOS read method  (default=`BP')
+  -n, --len=LONGLONG        array length  (default=`1')
+      --chunk=LONGLONG      chunk length  (default=`131072')
+      --timeout=FLOAT       Timeout  (default=`3600')
+      --sleep=INT           interval time  (default=`5')
+      --nstep=INT           number of time steps  (default=`10')
+      --wparam=STRING       write method params  (default=`')
+      --rparam=STRING       read method params  (default=`')
+      --prefix=STRING       prefix  (default=`')
+      --append              append  (default=off)
+      --filename=STRING     filename
+      --nostream            no stream  (default=off)
+      --transform=STRING    transform  (default=`')
+```
 
 Building
 --------
 
-Adios needs to be configured and built with the following staging options:
+For details of building Adios, please refer to the Adios manual. 
+
+To run with stagign methods, Adios needs to be configured and built with the following staging options:
 ```
 --with-flexpath=DIR 	Location of FlexPath
 --with-dataspaces=DIR   Build the DATASPACES transport method. Point to the
@@ -119,3 +146,6 @@ You can see the output from the reader something like:
 In this specific example, the last values (marked as ```^^^^^^```)
 should be multiple of 1 (more precisely, it should be rank + timesteps + 1)
 
+### 2. With ICEE
+
+Please refer to ```README-icee.txt```
