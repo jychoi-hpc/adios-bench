@@ -7,7 +7,8 @@ The main executable (```adios_icee```) can work in two modes:
 * server: write data (by default)
 * client: read data (use -c option)
 
-We can use staging methods in between: DATASPACES, DIMES, FLEXPATH, and ICEE methods
+We can use files as well as staging methods (DATASPACES, DIMES, FLEXPATH, and ICEE) 
+between them. It also has options to change the size of data, frequencies, etc.
 
 Main command line parameters are as follows:
 
@@ -37,7 +38,7 @@ Usage: adios_icee [OPTIONS]...
 Building
 --------
 
-For details of building Adios, please refer to the Adios manual. 
+For the details of building Adios, please refer to the Adios manual. 
 
 To run with stagign methods, Adios needs to be configured and built with the following staging options:
 ```
@@ -46,10 +47,10 @@ To run with stagign methods, Adios needs to be configured and built with the fol
                         DATASPACES installation.
 ```
 
-After Adios build and install, set PATH to include Adios' bin
-directory for ```adios_config```.
+After Adios built and installed, set the PATH env to include Adios' bin
+directory to access ```adios_config```.
 
-Then, this test program can be built by:
+Then, the main program can be built by:
 
 ```
 $ make
@@ -96,7 +97,7 @@ $ mpirun -n 4 adios_icee -r BP
 ```
 
 
-### 1. DataSpaces and DIMES
+### 1. With DataSpaces and DIMES
 
 For using DATASPACES and DIMES methods, we need to do
 -. Make sure ```dataspaces_server``` is in PATH
@@ -121,7 +122,7 @@ We need to provide an extra option ```--mpirun=aprun
 
 Also, we need at least 3 nodes to run this example.
 
-### 2. FlexPath
+### 2. With FlexPath
 
 ```
 ./run-dataspaces.py -s 1 --noserver : \
@@ -146,6 +147,6 @@ You can see the output from the reader something like:
 In this specific example, the last values (marked as ```^^^^^^```)
 should be multiple of 1 (more precisely, it should be rank + timesteps + 1)
 
-### 2. With ICEE
+### 3. With ICEE
 
 Please refer to ```README-icee.txt```
