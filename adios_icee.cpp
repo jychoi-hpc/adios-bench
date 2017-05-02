@@ -458,7 +458,7 @@ int main_leaf (int argc, char ** argv, MPI_Comm world_comm)
 
     adios_init_noxml (comm);
 
-    uint64_t buffer_size = ((NX * NY * sizeof(ATYPE) + 64)>>21) + 1L;
+    uint64_t buffer_size = ((NX * NY * sizeof(ATYPE) + 64)>>20) + 1L + 500;
     printf("Allocating buffer: %lld\n", buffer_size);
     adios_set_max_buffer_size (buffer_size);
 
