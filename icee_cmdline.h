@@ -114,6 +114,9 @@ struct icee_args_info
   char * transform_arg;	/**< @brief transform (default='').  */
   char * transform_orig;	/**< @brief transform original value given at command line.  */
   const char *transform_help; /**< @brief transform help description.  */
+  int treelevel_arg;	/**< @brief treelevel (default='0').  */
+  char * treelevel_orig;	/**< @brief treelevel original value given at command line.  */
+  const char *treelevel_help; /**< @brief treelevel help description.  */
   char * host_arg;	/**< @brief local hostname (default='localhost').  */
   char * host_orig;	/**< @brief local hostname original value given at command line.  */
   const char *host_help; /**< @brief local hostname help description.  */
@@ -179,6 +182,7 @@ struct icee_args_info
   unsigned int probe_given ;	/**< @brief Whether probe was given.  */
   unsigned int nostream_given ;	/**< @brief Whether nostream was given.  */
   unsigned int transform_given ;	/**< @brief Whether transform was given.  */
+  unsigned int treelevel_given ;	/**< @brief Whether treelevel was given.  */
   unsigned int host_given ;	/**< @brief Whether host was given.  */
   unsigned int port_given ;	/**< @brief Whether port was given.  */
   unsigned int remotehost_given ;	/**< @brief Whether remotehost was given.  */

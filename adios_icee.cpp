@@ -25,6 +25,7 @@
 #include <time.h>
 #include <sys/resource.h>
 #include "filelock.h"
+#include <pmi.h>
 
 using namespace std;
 
@@ -145,7 +146,7 @@ void do_write(const char* fname, const char* amode,
     double t1 = MPI_Wtime();
     adios_open (&m_adios_file, "restart", fname, amode, comm);
     adios_groupsize = 4 * 8 + NX * NY * sizeof(ATYPE) * NVAR;
-    adios_group_size (m_adios_file, adios_groupsize, &adios_totalsize);
+    //adios_group_size (m_adios_file, adios_groupsize, &adios_totalsize);
     //adios_set_max_buffer_size (adios_groupsize*size/1024L/1024L+1); // in MB
 
     double t2 = MPI_Wtime();
@@ -194,7 +195,7 @@ void do_write_1var(const char* fname, const char* amode, const char* vname,
     double t1 = MPI_Wtime();
     adios_open (&m_adios_file, "restart", fname, amode, comm);
     adios_groupsize = 4 * 8 + NX * NY * sizeof(ATYPE);
-    adios_group_size (m_adios_file, adios_groupsize, &adios_totalsize);
+    //adios_group_size (m_adios_file, adios_groupsize, &adios_totalsize);
     //adios_set_max_buffer_size (adios_groupsize*size/1024L/1024L+1); // in MB
 
     double t2 = MPI_Wtime();
@@ -224,10 +225,10 @@ void do_read(ADIOS_FILE *f, ADIOS_VARINFO * v, uint64_t NX, uint64_t *start, uin
     ADIOS_SELECTION * sel;
 
     if (NX>0) sel = adios_selection_boundingbox (v->ndim, start, count);
-  
+
     //MPI_Barrier(comm);
     *t0 = MPI_Wtime();
-    
+
     if (NX>0) adios_schedule_read_byid (f, sel, v->varid, current_step, 1, data);
 #ifdef ICEE
     adios_schedule_read (f, NULL, "__icee_deltat__", current_step, 1, icee_deltat);
@@ -236,22 +237,24 @@ void do_read(ADIOS_FILE *f, ADIOS_VARINFO * v, uint64_t NX, uint64_t *start, uin
 #endif
     adios_perform_reads (f, 1);
     //printf("icee_deltat=%g\n", icee_deltat);
-  
+
     //MPI_Barrier(comm);
     *t1 = MPI_Wtime();
-  
+
     adios_release_step (f);
-    if (NX>0) adios_selection_delete(sel);  
+    if (NX>0) adios_selection_delete(sel);
 }
 
 int main_leaf (int argc, char ** argv, MPI_Comm world_comm)
 {
+    /*
     printf("argc: %d\n", argc);
     int i = 0;
     while (argv[i]) {
         printf("argv[%d] = %s\n", i,argv[i]);
         i++;
     }
+    */
 
     setlinebuf(stdout);
 
@@ -311,7 +314,7 @@ int main_leaf (int argc, char ** argv, MPI_Comm world_comm)
     int use_lock = 0;
     if (args_info.uselock_flag)
         use_lock = 1;
-    
+
     string lock[] = {"_write.lck", "_read.lck"};
     for (int i = 0; i < args_info.filelock_given; ++i)
     {
@@ -332,6 +335,43 @@ int main_leaf (int argc, char ** argv, MPI_Comm world_comm)
     MPI_Get_processor_name(processor_name, &name_len);
 
     MPI_Comm_split(world_comm, args_info.mpicolor_arg, world_rank, &comm);
+
+    // Use PMI and do comm split along with tree structure
+    int prank;
+    int nid = -1;
+    pmi_mesh_coord_t xyz;
+    stringstream treelevel_ss;
+
+    if (args_info.treelevel_arg > 0)
+    {
+      PMI_Get_rank(&prank);
+      PMI_Get_nid(prank, &nid);
+      PMI_Get_meshcoord((pmi_nid_t) nid, &xyz);
+      printf(">>> PMI rank, nid, x, y, z = %d %d %u %u %u\n",
+             prank, nid, xyz.mesh_x, xyz.mesh_y, xyz.mesh_z);
+
+      MPI_Comm mesh_x_comm, mesh_y_comm, mesh_z_comm;
+      int mesh_x_rank, mesh_y_rank, mesh_z_rank;
+
+      MPI_Comm_split(world_comm, (int) xyz.mesh_x, world_rank, &mesh_x_comm);
+      comm = mesh_x_comm;
+      treelevel_ss << xyz.mesh_x;
+
+      if (args_info.treelevel_arg > 1)
+      {
+        MPI_Comm_split(mesh_x_comm, (int) xyz.mesh_y, world_rank, &mesh_y_comm);
+        comm = mesh_y_comm;
+        treelevel_ss << "-" << xyz.mesh_y;
+      }
+
+      if (args_info.treelevel_arg > 2)
+      {
+        MPI_Comm_split(mesh_y_comm, (int) xyz.mesh_z, world_rank, &mesh_z_comm);
+        comm = mesh_z_comm;
+        treelevel_ss << "-" << xyz.mesh_z;
+      }
+    }
+
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
@@ -406,6 +446,10 @@ int main_leaf (int argc, char ** argv, MPI_Comm world_comm)
     setlocale(LC_NUMERIC, "en_US.UTF-8");
 
     string fname = "icee.bp";
+    if (args_info.treelevel_arg > 0)
+    {
+      fname = "icee." + treelevel_ss.str() + ".bp";
+    }
     if (args_info.filename_given)
         fname = string(args_info.filename_arg);
     if (prefix.length() > 0)
@@ -414,7 +458,7 @@ int main_leaf (int argc, char ** argv, MPI_Comm world_comm)
 
     adios_init_noxml (comm);
 
-    uint64_t buffer_size = ((NX * NY * sizeof(ATYPE) + 64)>>20) + 1L + 500;
+    uint64_t buffer_size = ((NX * NY * sizeof(ATYPE) + 64)>>21) + 1L;
     printf("Allocating buffer: %lld\n", buffer_size);
     adios_set_max_buffer_size (buffer_size);
 
@@ -431,7 +475,7 @@ int main_leaf (int argc, char ** argv, MPI_Comm world_comm)
             lockinit(lock[0].c_str(), 1);
             lockinit(lock[1].c_str(), 0);
         }
-        
+
         while (NX >= minlen)
         {
             ATYPE        *t = (ATYPE *) malloc(NX * NY * sizeof(ATYPE));
@@ -464,7 +508,7 @@ int main_leaf (int argc, char ** argv, MPI_Comm world_comm)
                 printf("    %14s %5s %5s %9s %9s %9s %9s %9s %9s\n", "--------", "-----", "-----", "---------", "---------", "---------", "---------", "---------", "---------");
             }
             MPI_Barrier(comm);
-            
+
             for (int it =0; it < nstep; it++)
             {
                 for (uint64_t i = 0; i < NX*NY; i++)
@@ -489,7 +533,7 @@ int main_leaf (int argc, char ** argv, MPI_Comm world_comm)
                 {
                     lockup(lock[1].c_str());
                 }
-                
+
                 //ltime=time(NULL);
                 //timetext = asctime(localtime(&ltime));
                 //timetext[24] = '\0';
@@ -531,7 +575,7 @@ int main_leaf (int argc, char ** argv, MPI_Comm world_comm)
 
         double icee_deltat = 0.0;
         uint64_t start1[2], count1[2];
-        
+
         pid_t pid = getpid();
 
         err = adios_read_init_method (adios_read_method, comm, rparam.c_str());
@@ -647,7 +691,7 @@ int main_leaf (int argc, char ** argv, MPI_Comm world_comm)
                     {
                         lockdown(lock[1].c_str());
                     }
-                    
+
                     if (args_info.evilread_flag)
                     {
                         O = rand()%(G - NX);
@@ -682,7 +726,7 @@ int main_leaf (int argc, char ** argv, MPI_Comm world_comm)
                     {
                         lockup(lock[0].c_str());
                     }
-                    
+
                     double sum = 0.0;
                     for (uint64_t i = 0; i < NX * NY; i++)
                     {
@@ -753,7 +797,7 @@ int main_leaf (int argc, char ** argv, MPI_Comm world_comm)
                     }
                     else
                         adios_advance_step (f, 0, timeout_sec);
-                    
+
                     if (adios_errno == err_step_notready)
                     {
                         printf ("rank %d: No new step arrived within the timeout. Quit. %s\n",
