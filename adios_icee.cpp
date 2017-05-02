@@ -194,7 +194,7 @@ void do_write_1var(const char* fname, const char* amode, const char* vname,
     double t1 = MPI_Wtime();
     adios_open (&m_adios_file, "restart", fname, amode, comm);
     adios_groupsize = 4 * 8 + NX * NY * sizeof(ATYPE);
-    adios_group_size (m_adios_file, adios_groupsize, &adios_totalsize);
+    //adios_group_size (m_adios_file, adios_groupsize, &adios_totalsize);
     //adios_set_max_buffer_size (adios_groupsize*size/1024L/1024L+1); // in MB
 
     double t2 = MPI_Wtime();
@@ -414,8 +414,8 @@ int main_leaf (int argc, char ** argv, MPI_Comm world_comm)
 
     adios_init_noxml (comm);
 
-    uint64_t buffer_size = ((NX * NY * sizeof(ATYPE) + 64)>>20) + 1L + 500;
-    printf("Allocating buffer: %lld\n", buffer_size);
+    uint64_t buffer_size = ((NX * NY * sizeof(ATYPE) + 64)>>20) + 1L + 10;
+    if (rank==0) printf("Allocating buffer: %lld\n", buffer_size);
     adios_set_max_buffer_size (buffer_size);
 
     do_define(adios_write_method, wparam, string(args_info.transform_arg));
